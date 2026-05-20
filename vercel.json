@@ -1,4 +1,10 @@
 {
+  "buildCommand": false,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node@3"
+    }
+  },
   "rewrites": [
     { "source": "/api/projects", "destination": "/api/projects" },
     { "source": "/api/projects/:id", "destination": "/api/projects/[id]" }
