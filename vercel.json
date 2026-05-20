@@ -1,4 +1,6 @@
 {
+  "framework": null,
+  "outputDirectory": ".",
   "rewrites": [
     { "source": "/api/projects", "destination": "/api/projects" },
     { "source": "/api/projects/:id", "destination": "/api/projects/[id]" }
