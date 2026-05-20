@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clients – Work Log</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f4f6f8;
+      --text: #1a1a1a;
+      --text-secondary: #6b7280;
+      --text-tertiary: #9ca3af;
+      --border: rgba(0,0,0,0.12);
+      --border-hover: rgba(0,0,0,0.25);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --red: #dc2626;
+      --red-hover: #b91c1c;
+      --blue: #185FA5;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --bg-secondary: #242424;
+        --text: #f0f0f0;
+        --text-secondary: #9ca3af;
+        --text-tertiary: #6b7280;
+        --border: rgba(255,255,255,0.1);
+        --border-hover: rgba(255,255,255,0.25);
+        --red: #ef4444;
+        --red-hover: #dc2626;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    .back-link {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.12s;
+    }
+    .back-link:hover { color: var(--text); }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+    .add-row input {
+      flex: 1;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      outline: none;
+    }
+    .add-row input::placeholder { color: var(--text-tertiary); }
+    .add-row input:focus { border-color: var(--border-hover); }
+
+    .btn {
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 7px 14px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.12s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn:hover { border-color: var(--border-hover); }
+
+    .client-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .client-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+    }
+    .client-item input {
+      flex: 1;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      border-bottom: 1.5px solid transparent;
+      outline: none;
+      padding-bottom: 2px;
+      transition: border-color 0.15s;
+    }
+    .client-item input:focus { border-bottom-color: var(--border-hover); }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      font-size: 16px;
+      padding: 4px;
+      transition: color 0.12s;
+      display: flex;
+      align-items: center;
+    }
+    .delete-btn:hover { color: var(--red); }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-tertiary);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <h1>Clients</h1>
+      <a href="/" class="back-link"><i class="ti ti-arrow-left"></i> Back to projects</a>
+    </div>
+
+    <div class="add-row">
+      <input type="text" id="newClientName" placeholder="New client name..." />
+      <button class="btn" id="addBtn"><i class="ti ti-plus"></i> Add</button>
+    </div>
+
+    <div class="client-list" id="clientList"></div>
+  </div>
+
+  <script>
+    let clients = [];
+    let saveTimers = {};
+
+    async function api(method, path, body) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(`/api${path}`, opts);
+      return res.json();
+    }
+
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    async function loadClients() {
+      clients = await api('GET', '/clients');
+      renderList();
+    }
+
+    function renderList() {
+      const list = document.getElementById('clientList');
+      list.innerHTML = '';
+
+      if (clients.length === 0) {
+        list.innerHTML = '<div class="empty-state">No clients yet. Add one above.</div>';
+        return;
+      }
+
+      clients.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'client-item';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = c.name;
+        input.addEventListener('input', () => {
+          clearTimeout(saveTimers[c.id]);
+          saveTimers[c.id] = setTimeout(() => {
+            api('POST', `/clients/${c.id}`, { name: input.value });
+          }, 400);
+        });
+
+        const del = document.createElement('button');
+        del.className = 'delete-btn';
+        del.innerHTML = '<i class="ti ti-trash"></i>';
+        del.addEventListener('click', async () => {
+          if (!confirm(`Delete "${c.name || 'Untitled'}"?`)) return;
+          await api('DELETE', `/clients/${c.id}`);
+          await loadClients();
+        });
+
+        row.appendChild(input);
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+    }
+
+    document.getElementById('addBtn').addEventListener('click', async () => {
+      const input = document.getElementById('newClientName');
+      const name = input.value.trim();
+      if (!name) { input.focus(); return; }
+      const id = generateId();
+      await api('POST', `/clients/${id}`, { name });
+      input.value = '';
+      await loadClients();
+    });
+
+    document.getElementById('newClientName').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('addBtn').click();
+    });
+
+    loadClients();
+  </script>
+</body>
+</html>

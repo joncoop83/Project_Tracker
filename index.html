@@ -126,6 +126,40 @@
     .project-name::placeholder { color: var(--text-tertiary); }
     .project-name:focus { border-bottom-color: var(--border-hover); }
 
+    .client-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .client-row select {
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 5px 10px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 26px;
+    }
+    .manage-clients-link {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: color 0.12s;
+    }
+    .manage-clients-link:hover { color: var(--text-secondary); }
+
     .rate-row { display: flex; align-items: center; gap: 10px; }
     .rate-label { font-size: 13px; color: var(--text-secondary); }
     .rate-wrap {
@@ -262,7 +296,15 @@
     </div>
 
     <div class="top">
-      <input class="project-name" type="text" placeholder="Project name..." id="projName" />
+      <div>
+        <input class="project-name" type="text" placeholder="Project name..." id="projName" />
+        <div class="client-row">
+          <select id="clientSelect">
+            <option value="">No client</option>
+          </select>
+          <a href="/clients.html" class="manage-clients-link"><i class="ti ti-settings"></i> Manage</a>
+        </div>
+      </div>
       <div class="rate-row">
         <span class="rate-label">Day rate</span>
         <div class="rate-wrap">
@@ -346,11 +388,26 @@
       await loadProject(currentProjectId);
     }
 
+    async function loadClients() {
+      const clients = await api('GET', '/clients');
+      const select = document.getElementById('clientSelect');
+      const current = select.value;
+      select.innerHTML = '<option value="">No client</option>';
+      clients.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
+      select.value = current;
+    }
+
     async function loadProject(id) {
       currentProjectId = id;
       data = await api('GET', `/projects/${id}`);
       document.getElementById('projName').value = data.name || '';
       document.getElementById('dayRate').value = data.rate || 500;
+      document.getElementById('clientSelect').value = data.clientId || '';
       render();
     }
 
@@ -474,10 +531,14 @@
     document.getElementById('projectSelect').addEventListener('change', (e) => {
       loadProject(e.target.value);
     });
+    document.getElementById('clientSelect').addEventListener('change', () => {
+      data.clientId = document.getElementById('clientSelect').value || '';
+      scheduleSave();
+    });
     document.getElementById('newBtn').addEventListener('click', createNewProject);
     document.getElementById('deleteBtn').addEventListener('click', deleteProject);
 
-    loadProjectList();
+    loadClients().then(() => loadProjectList());
   </script>
 </body>
 </html>
